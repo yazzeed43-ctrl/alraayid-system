@@ -16,26 +16,37 @@ export default function Dashboard() {
   }, [])
 
   const fetchStats = async () => {
+
+    // عدد العمائر
     const { count: buildings } = await supabase
       .from("buildings")
       .select("*", { count: "exact", head: true })
 
+    // عدد الوحدات
     const { count: units } = await supabase
       .from("units")
       .select("*", { count: "exact", head: true })
 
+    // عدد المستأجرين
     const { count: tenants } = await supabase
       .from("tenants")
       .select("*", { count: "exact", head: true })
 
-    const { data: payments } = await supabase
+    // جلب الدفعات
+    const { data: paymentsData, error } = await supabase
       .from("payments")
       .select("amount")
 
-    const totalPayments = payments?.reduce(
-      (sum, p) => sum + Number(p.amount),
-      0
-    ) || 0
+    if (error) {
+      console.error("خطأ في جلب الدفعات:", error)
+    }
+
+    // حساب إجمالي الدخل
+    const totalPayments =
+      paymentsData?.reduce(
+        (sum, p) => sum + Number(p.amount || 0),
+        0
+      ) || 0
 
     setStats({
       buildings: buildings || 0,
