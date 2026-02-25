@@ -1,19 +1,14 @@
 import Sidebar from "@/components/Sidebar";
 
-export const metadata = {
-  title: "الرائد",
-  description: "نظام إدارة الأملاك",
-};
-
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen" dir="rtl">
+    <div style={{ background: "#0F0F0F", minHeight: "100vh" }}>
       <Sidebar />
-      <main className="mr-64 flex-1 p-6">
+      <main className="mr-60 min-h-screen">
         {children}
       </main>
     </div>

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/Sidebar";
 
 export const metadata: Metadata = {
   title: "نظام الرائد",
@@ -20,11 +19,8 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body style={{ fontFamily: "'Tajawal', sans-serif", background: "#FAF6F0" }}>
-        <Sidebar />
-        <main className="mr-64 min-h-screen flex flex-col">
-          {children}
-        </main>
+      <body style={{ fontFamily: "'Tajawal', sans-serif", background: "#0F0F0F", margin: 0 }}>
+        {children}
       </body>
     </html>
   );
