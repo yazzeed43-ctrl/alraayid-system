@@ -16,6 +16,12 @@ export default function BuildingDetails() {
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
 
+  // Tenant form
+  const [selectedUnit, setSelectedUnit] = useState<any>(null)
+  const [tenantName, setTenantName] = useState("")
+  const [tenantPhone, setTenantPhone] = useState("")
+  const [addingTenant, setAddingTenant] = useState(false)
+
   const fetchBuilding = async () => {
     const { data } = await supabase
       .from("buildings")
@@ -28,7 +34,7 @@ export default function BuildingDetails() {
   const fetchUnits = async () => {
     const { data } = await supabase
       .from("units")
-      .select("*")
+      .select("*, tenants(full_name, phone)")
       .eq("building_id", id)
       .order("created_at", { ascending: false })
     if (data) setUnits(data)
@@ -45,20 +51,34 @@ export default function BuildingDetails() {
   const addUnit = async () => {
     if (!unitNumber) return alert("أدخل رقم الوحدة")
     setAdding(true)
-    await supabase.from("units").insert([
-      {
-        building_id: id,
-        unit_number: unitNumber,
-        floor: Number(floor),
-        rent_price: Number(rentPrice),
-        status: "vacant",
-      }
-    ])
+    await supabase.from("units").insert([{
+      building_id: id,
+      unit_number: unitNumber,
+      floor: Number(floor),
+      rent_price: Number(rentPrice),
+      status: "vacant",
+    }])
     setUnitNumber("")
     setFloor("")
     setRentPrice("")
     setShowForm(false)
     setAdding(false)
+    fetchUnits()
+  }
+
+  const addTenant = async () => {
+    if (!tenantName) return alert("أدخل اسم المستأجر")
+    setAddingTenant(true)
+    await supabase.from("tenants").insert([{
+      full_name: tenantName,
+      phone: tenantPhone,
+      unit_id: selectedUnit.id,
+    }])
+    await supabase.from("units").update({ status: "occupied" }).eq("id", selectedUnit.id)
+    setTenantName("")
+    setTenantPhone("")
+    setSelectedUnit(null)
+    setAddingTenant(false)
     fetchUnits()
   }
 
@@ -76,13 +96,13 @@ export default function BuildingDetails() {
 
   return (
     <main dir="rtl" className="min-h-screen p-6" style={{ backgroundColor: '#0a0a0a', color: '#f5f0e8' }}>
-      
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-4">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg transition-all"
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg"
             style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #2a2a2a' }}
           >
             ← رجوع
@@ -91,15 +111,12 @@ export default function BuildingDetails() {
             <h1 className="text-2xl font-bold" style={{ color: '#C9A96E' }}>
               {building?.name || 'تفاصيل المبنى'}
             </h1>
-            <p className="text-sm mt-1" style={{ color: '#888' }}>
-              {building?.address || ''}
-            </p>
+            <p className="text-sm mt-1" style={{ color: '#888' }}>{building?.location || ''}</p>
           </div>
         </div>
-
         <button
           onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all"
+          className="px-5 py-2.5 rounded-lg font-medium"
           style={{ backgroundColor: '#C9A96E', color: '#0a0a0a' }}
         >
           {showForm ? '✕ إغلاق' : '+ إضافة وحدة'}
@@ -132,7 +149,7 @@ export default function BuildingDetails() {
               <input
                 type="text"
                 placeholder="مثال: A101"
-                className="w-full p-3 rounded-lg outline-none transition-all"
+                className="w-full p-3 rounded-lg outline-none"
                 style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#f5f0e8' }}
                 value={unitNumber}
                 onChange={(e) => setUnitNumber(e.target.value)}
@@ -165,11 +182,62 @@ export default function BuildingDetails() {
             <button
               onClick={addUnit}
               disabled={adding}
-              className="w-full py-3 rounded-lg font-bold transition-all mt-1"
+              className="w-full py-3 rounded-lg font-bold"
               style={{ backgroundColor: '#C9A96E', color: '#0a0a0a', opacity: adding ? 0.7 : 1 }}
             >
               {adding ? 'جاري الإضافة...' : 'إضافة الوحدة'}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Add Tenant Modal */}
+      {selectedUnit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+          <div className="rounded-xl p-6 w-full max-w-md mx-4" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
+            <h2 className="text-lg font-bold mb-1" style={{ color: '#C9A96E' }}>إضافة مستأجر</h2>
+            <p className="text-sm mb-5" style={{ color: '#888' }}>وحدة {selectedUnit.unit_number}</p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm mb-1.5 block" style={{ color: '#aaa' }}>اسم المستأجر *</label>
+                <input
+                  type="text"
+                  placeholder="الاسم الكامل"
+                  className="w-full p-3 rounded-lg outline-none"
+                  style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#f5f0e8' }}
+                  value={tenantName}
+                  onChange={(e) => setTenantName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm mb-1.5 block" style={{ color: '#aaa' }}>رقم الجوال</label>
+                <input
+                  type="text"
+                  placeholder="05xxxxxxxx"
+                  className="w-full p-3 rounded-lg outline-none"
+                  style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#f5f0e8' }}
+                  value={tenantPhone}
+                  onChange={(e) => setTenantPhone(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => { setSelectedUnit(null); setTenantName(""); setTenantPhone("") }}
+                  className="flex-1 py-3 rounded-lg font-medium"
+                  style={{ backgroundColor: '#1a1a1a', color: '#888', border: '1px solid #2a2a2a' }}
+                >
+                  إلغاء
+                </button>
+                <button
+                  onClick={addTenant}
+                  disabled={addingTenant}
+                  className="flex-1 py-3 rounded-lg font-bold"
+                  style={{ backgroundColor: '#C9A96E', color: '#0a0a0a', opacity: addingTenant ? 0.7 : 1 }}
+                >
+                  {addingTenant ? 'جاري الإضافة...' : 'إضافة'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -185,27 +253,24 @@ export default function BuildingDetails() {
         </div>
       ) : (
         <div>
-          <h2 className="text-lg font-bold mb-4" style={{ color: '#C9A96E' }}>
-            الوحدات ({totalUnits})
-          </h2>
+          <h2 className="text-lg font-bold mb-4" style={{ color: '#C9A96E' }}>الوحدات ({totalUnits})</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {units.map((unit) => {
               const { label, color } = statusLabel(unit.status)
+              const tenant = unit.tenants?.[0]
               return (
                 <div
                   key={unit.id}
-                  className="p-5 rounded-xl transition-all cursor-pointer hover:scale-[1.02]"
+                  className="p-5 rounded-xl"
                   style={{ backgroundColor: '#111', border: '1px solid #1e1e1e' }}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xl font-bold" style={{ color: '#f5f0e8' }}>
                       وحدة {unit.unit_number}
                     </span>
-                    <span className={`text-xs px-3 py-1 rounded-full ${color}`}>
-                      {label}
-                    </span>
+                    <span className={`text-xs px-3 py-1 rounded-full ${color}`}>{label}</span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-sm">
                       <span style={{ color: '#888' }}>الدور</span>
                       <span style={{ color: '#f5f0e8' }}>{unit.floor || '—'}</span>
@@ -216,7 +281,22 @@ export default function BuildingDetails() {
                         {unit.rent_price ? unit.rent_price.toLocaleString() + ' ر.س' : '—'}
                       </span>
                     </div>
+                    {tenant && (
+                      <div className="flex justify-between text-sm">
+                        <span style={{ color: '#888' }}>المستأجر</span>
+                        <span style={{ color: '#34d399' }}>{tenant.full_name}</span>
+                      </div>
+                    )}
                   </div>
+                  {unit.status !== "occupied" && (
+                    <button
+                      onClick={() => setSelectedUnit(unit)}
+                      className="w-full py-2 rounded-lg text-sm font-medium"
+                      style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #C9A96E33' }}
+                    >
+                      + إضافة مستأجر
+                    </button>
+                  )}
                 </div>
               )
             })}
