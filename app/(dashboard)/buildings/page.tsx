@@ -8,7 +8,7 @@ export default function BuildingsPage() {
   const router = useRouter()
   const [buildings, setBuildings] = useState<any[]>([])
   const [name, setName] = useState("")
-  const [address, setAddress] = useState("")
+  const [location, setLocation] = useState("")
   const [totalUnits, setTotalUnits] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -33,12 +33,12 @@ export default function BuildingsPage() {
     await supabase.from("buildings").insert([
       {
         name,
-        address,
+        location,
         total_units: Number(totalUnits),
       }
     ])
     setName("")
-    setAddress("")
+    setLocation("")
     setTotalUnits("")
     setShowForm(false)
     setAdding(false)
@@ -102,8 +102,8 @@ export default function BuildingsPage() {
                 placeholder="مثال: حي النزهة، جدة"
                 className="w-full p-3 rounded-lg outline-none"
                 style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#f5f0e8' }}
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
               />
             </div>
             <div>
@@ -154,7 +154,7 @@ export default function BuildingsPage() {
                 </span>
               </div>
               <h3 className="text-lg font-bold mb-1" style={{ color: '#f5f0e8' }}>{building.name}</h3>
-              <p className="text-sm mb-4" style={{ color: '#888' }}>{building.address || 'لم يحدد الموقع'}</p>
+              <p className="text-sm mb-4" style={{ color: '#888' }}>{building.location || 'لم يحدد الموقع'}</p>
               <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #1e1e1e' }}>
                 <span className="text-xs" style={{ color: '#555' }}>اضغط للتفاصيل</span>
                 <span style={{ color: '#C9A96E' }}>←</span>
