@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 
 type Role = 'admin' | 'employee' | null
 
 export function useRole() {
   const [role, setRole] = useState<Role>(null)
   const [loading, setLoading] = useState(true)
-  const supabase = createClientComponentClient()
 
   useEffect(() => {
     const getRole = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      
+
       if (!user) {
         setRole(null)
         setLoading(false)
