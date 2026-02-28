@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useRole } from "@/hooks/useRole"
 
 export default function BuildingsPage() {
   const router = useRouter()
+  const { isAdmin, loading: roleLoading } = useRole()
   const [buildings, setBuildings] = useState<any[]>([])
   const [name, setName] = useState("")
   const [location, setLocation] = useState("")
@@ -45,6 +47,14 @@ export default function BuildingsPage() {
     fetchBuildings()
   }
 
+  if (roleLoading) {
+    return (
+      <main dir="rtl" className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0a0a0a' }}>
+        <div style={{ color: '#C9A96E' }}>جاري التحقق من الصلاحيات...</div>
+      </main>
+    )
+  }
+
   return (
     <main dir="rtl" className="min-h-screen p-6" style={{ backgroundColor: '#0a0a0a', color: '#f5f0e8' }}>
 
@@ -54,13 +64,16 @@ export default function BuildingsPage() {
           <h1 className="text-2xl font-bold" style={{ color: '#C9A96E' }}>إدارة العمائر</h1>
           <p className="text-sm mt-1" style={{ color: '#888' }}>جميع العمائر المسجلة في النظام</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="px-5 py-2.5 rounded-lg font-medium transition-all"
-          style={{ backgroundColor: '#C9A96E', color: '#0a0a0a' }}
-        >
-          {showForm ? '✕ إغلاق' : '+ إضافة عمارة'}
-        </button>
+        {/* زر الإضافة للأدمن فقط */}
+        {isAdmin && (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="px-5 py-2.5 rounded-lg font-medium transition-all"
+            style={{ backgroundColor: '#C9A96E', color: '#0a0a0a' }}
+          >
+            {showForm ? '✕ إغلاق' : '+ إضافة عمارة'}
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -79,8 +92,8 @@ export default function BuildingsPage() {
         </div>
       </div>
 
-      {/* Add Form */}
-      {showForm && (
+      {/* Add Form - للأدمن فقط */}
+      {isAdmin && showForm && (
         <div className="rounded-xl p-6 mb-8 max-w-lg" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
           <h2 className="text-lg font-bold mb-5" style={{ color: '#C9A96E' }}>إضافة عمارة جديدة</h2>
           <div className="space-y-4">
@@ -99,7 +112,7 @@ export default function BuildingsPage() {
               <label className="text-sm mb-1.5 block" style={{ color: '#aaa' }}>الموقع</label>
               <input
                 type="text"
-                placeholder="مثال: حي النزهة، جدة"
+                placeholder="مثال: حي النزهة، مكة"
                 className="w-full p-3 rounded-lg outline-none"
                 style={{ backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#f5f0e8' }}
                 value={location}
