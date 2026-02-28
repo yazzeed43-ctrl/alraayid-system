@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { useRole } from "@/hooks/useRole"
 
 export default function BuildingDetails() {
   const { id } = useParams()
   const router = useRouter()
+  const { isAdmin, loading: roleLoading } = useRole()
   const [units, setUnits] = useState<any[]>([])
   const [building, setBuilding] = useState<any>(null)
   const [unitNumber, setUnitNumber] = useState("")
@@ -127,6 +129,14 @@ export default function BuildingDetails() {
 
   const inputStyle = { backgroundColor: '#1a1a1a', border: '1px solid #2a2a2a', color: '#f5f0e8' }
 
+  if (roleLoading) {
+    return (
+      <main dir="rtl" className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#0a0a0a' }}>
+        <div style={{ color: '#C9A96E' }}>جاري التحقق من الصلاحيات...</div>
+      </main>
+    )
+  }
+
   return (
     <main dir="rtl" className="min-h-screen p-6" style={{ backgroundColor: '#0a0a0a', color: '#f5f0e8' }}>
 
@@ -142,10 +152,13 @@ export default function BuildingDetails() {
             <p className="text-sm mt-1" style={{ color: '#888' }}>{building?.location || ''}</p>
           </div>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="px-5 py-2.5 rounded-lg font-medium"
-          style={{ backgroundColor: '#C9A96E', color: '#0a0a0a' }}>
-          {showForm ? '✕ إغلاق' : '+ إضافة وحدة'}
-        </button>
+        {/* زر إضافة وحدة للأدمن فقط */}
+        {isAdmin && (
+          <button onClick={() => setShowForm(!showForm)} className="px-5 py-2.5 rounded-lg font-medium"
+            style={{ backgroundColor: '#C9A96E', color: '#0a0a0a' }}>
+            {showForm ? '✕ إغلاق' : '+ إضافة وحدة'}
+          </button>
+        )}
       </div>
 
       {/* Stats */}
@@ -164,8 +177,8 @@ export default function BuildingDetails() {
         ))}
       </div>
 
-      {/* Add Unit Form */}
-      {showForm && (
+      {/* Add Unit Form - للأدمن فقط */}
+      {isAdmin && showForm && (
         <div className="rounded-xl p-6 mb-8 max-w-lg" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
           <h2 className="text-lg font-bold mb-5" style={{ color: '#C9A96E' }}>إضافة وحدة جديدة</h2>
           <div className="grid grid-cols-1 gap-4">
@@ -194,8 +207,8 @@ export default function BuildingDetails() {
         </div>
       )}
 
-      {/* Add Tenant Modal */}
-      {selectedUnit && (
+      {/* Add Tenant Modal - للأدمن فقط */}
+      {isAdmin && selectedUnit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="rounded-xl p-6 w-full max-w-md mx-4" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
             <h2 className="text-lg font-bold mb-1" style={{ color: '#C9A96E' }}>إضافة مستأجر</h2>
@@ -225,8 +238,8 @@ export default function BuildingDetails() {
         </div>
       )}
 
-      {/* Edit Unit Modal */}
-      {editUnit && (
+      {/* Edit Unit Modal - للأدمن فقط */}
+      {isAdmin && editUnit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="rounded-xl p-6 w-full max-w-md mx-4" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
             <h2 className="text-lg font-bold mb-5" style={{ color: '#C9A96E' }}>تعديل الوحدة</h2>
@@ -259,8 +272,8 @@ export default function BuildingDetails() {
         </div>
       )}
 
-      {/* Edit Tenant Modal */}
-      {editTenant && (
+      {/* Edit Tenant Modal - للأدمن فقط */}
+      {isAdmin && editTenant && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="rounded-xl p-6 w-full max-w-md mx-4" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
             <h2 className="text-lg font-bold mb-5" style={{ color: '#C9A96E' }}>تعديل المستأجر</h2>
@@ -307,10 +320,15 @@ export default function BuildingDetails() {
                     <span className="text-xl font-bold" style={{ color: '#f5f0e8' }}>وحدة {unit.unit_number}</span>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-3 py-1 rounded-full ${color}`}>{label}</span>
-                      <button onClick={() => openEditUnit(unit)} className="text-xs px-2 py-1 rounded"
-                        style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #2a2a2a' }}>✏️</button>
-                      <button onClick={() => deleteUnit(unit.id)} className="text-xs px-2 py-1 rounded"
-                        style={{ backgroundColor: '#1a1a1a', color: '#ef4444', border: '1px solid #2a2a2a' }}>🗑️</button>
+                      {/* أزرار التعديل والحذف للأدمن فقط */}
+                      {isAdmin && (
+                        <>
+                          <button onClick={() => openEditUnit(unit)} className="text-xs px-2 py-1 rounded"
+                            style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #2a2a2a' }}>✏️</button>
+                          <button onClick={() => deleteUnit(unit.id)} className="text-xs px-2 py-1 rounded"
+                            style={{ backgroundColor: '#1a1a1a', color: '#ef4444', border: '1px solid #2a2a2a' }}>🗑️</button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="space-y-2 mb-4">
@@ -331,17 +349,21 @@ export default function BuildingDetails() {
                             <p className="text-sm" style={{ color: '#34d399' }}>{tenant.full_name}</p>
                             <p className="text-xs" style={{ color: '#666' }}>{tenant.phone || '—'}</p>
                           </div>
-                          <div className="flex gap-2">
-                            <button onClick={() => openEditTenant(tenant)} className="text-xs px-2 py-1 rounded"
-                              style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #2a2a2a' }}>✏️</button>
-                            <button onClick={() => deleteTenant(tenant.id, unit.id)} className="text-xs px-2 py-1 rounded"
-                              style={{ backgroundColor: '#1a1a1a', color: '#ef4444', border: '1px solid #2a2a2a' }}>🗑️</button>
-                          </div>
+                          {/* أزرار تعديل وحذف المستأجر للأدمن فقط */}
+                          {isAdmin && (
+                            <div className="flex gap-2">
+                              <button onClick={() => openEditTenant(tenant)} className="text-xs px-2 py-1 rounded"
+                                style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #2a2a2a' }}>✏️</button>
+                              <button onClick={() => deleteTenant(tenant.id, unit.id)} className="text-xs px-2 py-1 rounded"
+                                style={{ backgroundColor: '#1a1a1a', color: '#ef4444', border: '1px solid #2a2a2a' }}>🗑️</button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
                   </div>
-                  {unit.status !== "occupied" && (
+                  {/* زر إضافة مستأجر للأدمن فقط */}
+                  {isAdmin && unit.status !== "occupied" && (
                     <button onClick={() => setSelectedUnit(unit)} className="w-full py-2 rounded-lg text-sm font-medium"
                       style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #C9A96E33' }}>
                       + إضافة مستأجر
