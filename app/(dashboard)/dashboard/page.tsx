@@ -18,30 +18,66 @@ export default function DashboardPage() {
   const [buildingIncome, setBuildingIncome] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+
   useEffect(() => {
     fetchAll()
   }, [])
 
+  useEffect(() => {
+    if (searchQuery.trim().length >= 2) {
+      handleSearch(searchQuery)
+    } else {
+      setSearchResults([])
+    }
+  }, [searchQuery])
+
+  const handleSearch = async (query: string) => {
+    setSearching(true)
+    const { data } = await supabase
+      .from("tenants")
+      .select(`
+        id, full_name, phone,
+        units(id, unit_number, rent_price, building_id,
+          buildings(name)
+        )
+      `)
+      .ilike("full_name", `%${query}%`)
+      .limit(10)
+
+    if (data) {
+      // جلب الدفعات لكل مستأجر
+      const tenantIds = data.map((t: any) => t.id)
+      const { data: payments } = await supabase
+        .from("payments")
+        .select("*")
+        .in("tenant_id", tenantIds)
+        .order("created_at", { ascending: false })
+
+      const results = data.map((t: any) => ({
+        ...t,
+        payments: payments?.filter((p: any) => p.tenant_id === t.id) || [],
+      }))
+      setSearchResults(results)
+    }
+    setSearching(false)
+  }
+
   const fetchAll = async () => {
-    // Buildings
     const { data: buildings } = await supabase.from("buildings").select("*")
-
-    // Units
     const { data: units } = await supabase.from("units").select("*")
-
-    // Tenants
     const { data: tenants } = await supabase
       .from("tenants")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(5)
-
-    // All tenants count
     const { count: tenantCount } = await supabase
       .from("tenants")
       .select("*", { count: "exact", head: true })
 
-    // Contracts expiring in 30 days
     const today = new Date()
     const in30Days = new Date()
     in30Days.setDate(today.getDate() + 30)
@@ -54,13 +90,11 @@ export default function DashboardPage() {
       .order("end_date", { ascending: true })
       .limit(5)
 
-    // Income by building
     const { data: incomeData } = await supabase
       .from("units")
       .select("building_id, rent_price, status, buildings(name)")
       .eq("status", "occupied")
 
-    // Calculate building income
     const incomeMap: Record<string, { name: string; total: number }> = {}
     incomeData?.forEach((u: any) => {
       const bid = u.building_id
@@ -112,6 +146,103 @@ export default function DashboardPage() {
       </header>
 
       <div className="p-8">
+
+        {/* Search Bar */}
+        <div className="mb-6 relative">
+          <div className="relative">
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-lg">🔍</span>
+            <input
+              type="text"
+              placeholder="ابحث عن مستأجر بالاسم..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pr-12 pl-4 py-3 rounded-xl outline-none text-sm"
+              style={{
+                background: "#141414",
+                border: "1px solid rgba(201,169,110,0.3)",
+                color: "#f5f0e8",
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => { setSearchQuery(""); setSearchResults([]) }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-sm"
+                style={{ color: "rgba(255,255,255,0.3)" }}
+              >✕</button>
+            )}
+          </div>
+
+          {/* Search Results */}
+          {searchQuery.trim().length >= 2 && (
+            <div className="absolute w-full mt-2 rounded-xl z-50 overflow-hidden"
+              style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.08)" }}>
+              {searching ? (
+                <p className="text-sm text-center py-4" style={{ color: "rgba(255,255,255,0.3)" }}>جاري البحث...</p>
+              ) : searchResults.length === 0 ? (
+                <p className="text-sm text-center py-4" style={{ color: "rgba(255,255,255,0.3)" }}>لا توجد نتائج</p>
+              ) : (
+                <div className="max-h-96 overflow-y-auto">
+                  {searchResults.map((tenant) => (
+                    <div key={tenant.id} className="p-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                      {/* معلومات المستأجر */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold"
+                          style={{ background: "rgba(201,169,110,0.15)", color: "#C9A96E" }}>
+                          {tenant.full_name?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">{tenant.full_name}</p>
+                          <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                            {tenant.phone || "—"} · {tenant.units?.buildings?.name || "—"} · وحدة {tenant.units?.unit_number || "—"}
+                          </p>
+                        </div>
+                        <span className="mr-auto text-xs px-2 py-1 rounded-full"
+                          style={{ background: "rgba(201,169,110,0.1)", color: "#C9A96E" }}>
+                          {tenant.units?.rent_price?.toLocaleString() || 0} ر.س/شهر
+                        </span>
+                      </div>
+
+                      {/* الدفعات */}
+                      {tenant.payments.length > 0 ? (
+                        <div className="rounded-lg overflow-hidden" style={{ background: "rgba(255,255,255,0.03)" }}>
+                          <div className="grid grid-cols-3 px-3 py-2 text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
+                            <span>المبلغ</span>
+                            <span>التاريخ</span>
+                            <span>الحالة</span>
+                          </div>
+                          {tenant.payments.slice(0, 3).map((p: any) => (
+                            <div key={p.id} className="grid grid-cols-3 px-3 py-2 text-xs"
+                              style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+                              <span style={{ color: "#C9A96E" }}>{p.amount?.toLocaleString()} ر.س</span>
+                              <span style={{ color: "rgba(255,255,255,0.5)" }}>
+                                {new Date(p.created_at).toLocaleDateString("ar-SA")}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full w-fit"
+                                style={{
+                                  background: p.status === "paid" ? "rgba(52,211,153,0.1)" : "rgba(239,68,68,0.1)",
+                                  color: p.status === "paid" ? "#34d399" : "#ef4444"
+                                }}>
+                                {p.status === "paid" ? "مدفوع" : "غير مدفوع"}
+                              </span>
+                            </div>
+                          ))}
+                          {tenant.payments.length > 3 && (
+                            <p className="text-xs text-center py-2" style={{ color: "rgba(255,255,255,0.2)" }}>
+                              +{tenant.payments.length - 3} دفعات أخرى
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>لا توجد دفعات مسجلة</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
           {[
