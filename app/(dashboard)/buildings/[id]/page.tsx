@@ -59,7 +59,7 @@ export default function BuildingDetails() {
     setAdding(true)
     await supabase.from("units").insert([{
       building_id: id, unit_number: unitNumber,
-      floor: Number(floor), rent_price: Number(rentPrice), status: "vacant",
+      floor: Number(floor), rent_price: Number(rentPrice), status: "شاغرة",
     }])
     setUnitNumber(""); setFloor(""); setRentPrice("")
     setShowForm(false); setAdding(false); fetchUnits()
@@ -69,7 +69,7 @@ export default function BuildingDetails() {
     if (!tenantName) return alert("أدخل اسم المستأجر")
     setAddingTenant(true)
     await supabase.from("tenants").insert([{ full_name: tenantName, phone: tenantPhone, unit_id: selectedUnit.id }])
-    await supabase.from("units").update({ status: "occupied" }).eq("id", selectedUnit.id)
+    await supabase.from("units").update({ status: "مؤجرة" }).eq("id", selectedUnit.id)
     setTenantName(""); setTenantPhone(""); setSelectedUnit(null); setAddingTenant(false); fetchUnits()
   }
 
@@ -83,7 +83,7 @@ export default function BuildingDetails() {
   const deleteTenant = async (tenantId: string, unitId: string) => {
     if (!confirm("هل أنت متأكد من حذف المستأجر؟")) return
     await supabase.from("tenants").delete().eq("id", tenantId)
-    await supabase.from("units").update({ status: "vacant" }).eq("id", unitId)
+    await supabase.from("units").update({ status: "شاغرة" }).eq("id", unitId)
     fetchUnits()
   }
 
@@ -118,12 +118,12 @@ export default function BuildingDetails() {
   }
 
   const totalUnits = units.length
-  const occupiedUnits = units.filter(u => u.status === "occupied").length
-  const vacantUnits = units.filter(u => u.status !== "occupied").length
-  const totalRevenue = units.filter(u => u.status === "occupied").reduce((sum, u) => sum + (u.rent_price || 0), 0)
+  const occupiedUnits = units.filter(u => u.status === "مؤجرة").length
+  const vacantUnits = units.filter(u => u.status !== "مؤجرة").length
+  const totalRevenue = units.filter(u => u.status === "مؤجرة").reduce((sum, u) => sum + (u.rent_price || 0), 0)
 
   const statusLabel = (status: string) => {
-    if (status === "occupied") return { label: "مؤجرة", color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" }
+    if (status === "مؤجرة") return { label: "مؤجرة", color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" }
     return { label: "شاغرة", color: "bg-amber-500/20 text-amber-400 border border-amber-500/30" }
   }
 
@@ -152,7 +152,6 @@ export default function BuildingDetails() {
             <p className="text-sm mt-1" style={{ color: '#888' }}>{building?.location || ''}</p>
           </div>
         </div>
-        {/* زر إضافة وحدة للأدمن فقط */}
         {isAdmin && (
           <button onClick={() => setShowForm(!showForm)} className="px-5 py-2.5 rounded-lg font-medium"
             style={{ backgroundColor: '#C9A96E', color: '#0a0a0a' }}>
@@ -177,14 +176,14 @@ export default function BuildingDetails() {
         ))}
       </div>
 
-      {/* Add Unit Form - للأدمن فقط */}
+      {/* Add Unit Form */}
       {isAdmin && showForm && (
         <div className="rounded-xl p-6 mb-8 max-w-lg" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
           <h2 className="text-lg font-bold mb-5" style={{ color: '#C9A96E' }}>إضافة وحدة جديدة</h2>
           <div className="grid grid-cols-1 gap-4">
             <div>
               <label className="text-sm mb-1.5 block" style={{ color: '#aaa' }}>رقم الوحدة *</label>
-              <input type="text" placeholder="مثال: A101" className="w-full p-3 rounded-lg outline-none"
+              <input type="text" placeholder="مثال: 101" className="w-full p-3 rounded-lg outline-none"
                 style={inputStyle} value={unitNumber} onChange={(e) => setUnitNumber(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -207,7 +206,7 @@ export default function BuildingDetails() {
         </div>
       )}
 
-      {/* Add Tenant Modal - للأدمن فقط */}
+      {/* Add Tenant Modal */}
       {isAdmin && selectedUnit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="rounded-xl p-6 w-full max-w-md mx-4" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
@@ -238,7 +237,7 @@ export default function BuildingDetails() {
         </div>
       )}
 
-      {/* Edit Unit Modal - للأدمن فقط */}
+      {/* Edit Unit Modal */}
       {isAdmin && editUnit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="rounded-xl p-6 w-full max-w-md mx-4" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
@@ -272,7 +271,7 @@ export default function BuildingDetails() {
         </div>
       )}
 
-      {/* Edit Tenant Modal - للأدمن فقط */}
+      {/* Edit Tenant Modal */}
       {isAdmin && editTenant && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
           <div className="rounded-xl p-6 w-full max-w-md mx-4" style={{ backgroundColor: '#111', border: '1px solid #C9A96E33' }}>
@@ -306,6 +305,12 @@ export default function BuildingDetails() {
         <div className="text-center py-20 rounded-xl" style={{ backgroundColor: '#111', border: '1px solid #1e1e1e' }}>
           <div className="text-5xl mb-4">🏢</div>
           <p className="text-lg mb-2" style={{ color: '#888' }}>لا توجد وحدات بعد</p>
+          {isAdmin && (
+            <button onClick={() => setShowForm(true)} className="mt-4 px-6 py-2.5 rounded-lg font-medium"
+              style={{ backgroundColor: '#C9A96E', color: '#0a0a0a' }}>
+              + إضافة أول وحدة
+            </button>
+          )}
         </div>
       ) : (
         <div>
@@ -320,7 +325,6 @@ export default function BuildingDetails() {
                     <span className="text-xl font-bold" style={{ color: '#f5f0e8' }}>وحدة {unit.unit_number}</span>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs px-3 py-1 rounded-full ${color}`}>{label}</span>
-                      {/* أزرار التعديل والحذف للأدمن فقط */}
                       {isAdmin && (
                         <>
                           <button onClick={() => openEditUnit(unit)} className="text-xs px-2 py-1 rounded"
@@ -337,7 +341,7 @@ export default function BuildingDetails() {
                       <span style={{ color: '#f5f0e8' }}>{unit.floor || '—'}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span style={{ color: '#888' }}>الإيجار الشهري</span>
+                      <span style={{ color: '#888' }}>الإيجار السنوي</span>
                       <span style={{ color: '#C9A96E', fontWeight: 'bold' }}>
                         {unit.rent_price ? unit.rent_price.toLocaleString() + ' ر.س' : '—'}
                       </span>
@@ -349,7 +353,6 @@ export default function BuildingDetails() {
                             <p className="text-sm" style={{ color: '#34d399' }}>{tenant.full_name}</p>
                             <p className="text-xs" style={{ color: '#666' }}>{tenant.phone || '—'}</p>
                           </div>
-                          {/* أزرار تعديل وحذف المستأجر للأدمن فقط */}
                           {isAdmin && (
                             <div className="flex gap-2">
                               <button onClick={() => openEditTenant(tenant)} className="text-xs px-2 py-1 rounded"
@@ -362,8 +365,7 @@ export default function BuildingDetails() {
                       </div>
                     )}
                   </div>
-                  {/* زر إضافة مستأجر للأدمن فقط */}
-                  {isAdmin && unit.status !== "occupied" && (
+                  {isAdmin && unit.status !== "مؤجرة" && (
                     <button onClick={() => setSelectedUnit(unit)} className="w-full py-2 rounded-lg text-sm font-medium"
                       style={{ backgroundColor: '#1a1a1a', color: '#C9A96E', border: '1px solid #C9A96E33' }}>
                       + إضافة مستأجر
