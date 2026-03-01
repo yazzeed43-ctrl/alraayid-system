@@ -3,13 +3,16 @@ import type { NextRequest } from "next/server"
 
 export function middleware(request: NextRequest) {
   const auth = request.cookies.get("auth")?.value
-  const isLoginPage = request.nextUrl.pathname === "/login"
+  const { pathname } = request.nextUrl
 
-  if (!auth && !isLoginPage) {
+  const publicPaths = ["/login", "/reset-password", "/auth/callback"]
+  const isPublic = publicPaths.some(path => pathname.startsWith(path))
+
+  if (!auth && !isPublic) {
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
-  if (auth && isLoginPage) {
+  if (auth && pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
