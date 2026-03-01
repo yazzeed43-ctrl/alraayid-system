@@ -1,4 +1,4 @@
-"use client"
+Ôªø"use client"
 import { useEffect } from "react"
 import { createBrowserClient } from "@supabase/ssr"
 import { useRouter } from "next/navigation"
@@ -24,7 +24,7 @@ export default function AuthCallback() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <p className="text-white text-xl">Ã«—Ì «· Õﬁﬁ...</p>
+      <p className="text-white text-xl">Loading...</p>
     </div>
   )
 }
