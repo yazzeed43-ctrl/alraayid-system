@@ -10,6 +10,7 @@ export function useRole() {
   useEffect(() => {
     const getRole = async () => {
       const { data: { user } } = await supabase.auth.getUser()
+      console.log('user:', user?.id)
 
       if (!user) {
         setRole(null)
@@ -17,12 +18,13 @@ export function useRole() {
         return
       }
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
         .single()
 
+      console.log('profile data:', data, 'error:', error)
       setRole(data?.role ?? null)
       setLoading(false)
     }
