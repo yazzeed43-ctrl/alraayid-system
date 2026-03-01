@@ -11,6 +11,7 @@ export default function TenantsPage() {
   const [unitId, setUnitId] = useState("")
   const [rentAmount, setRentAmount] = useState("")
   const [startDate, setStartDate] = useState("")
+  const [paymentType, setPaymentType] = useState("سنوي")
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -35,10 +36,11 @@ export default function TenantsPage() {
     setLoading(true)
     await supabase.from("tenants").insert([{
       full_name: fullName, phone, unit_id: unitId,
-      rent_amount: Number(rentAmount), start_date: startDate
+      rent_amount: Number(rentAmount), start_date: startDate,
+      payment_type: paymentType
     }])
     await supabase.from("units").update({ status: "مؤجرة" }).eq("id", unitId)
-    setFullName(""); setPhone(""); setUnitId(""); setRentAmount(""); setStartDate("")
+    setFullName(""); setPhone(""); setUnitId(""); setRentAmount(""); setStartDate(""); setPaymentType("سنوي")
     setShowForm(false); setLoading(false)
     fetchTenants(); fetchUnits()
   }
@@ -48,12 +50,18 @@ export default function TenantsPage() {
     if (!confirmed) return
     setDeletingId(tenant.id)
     await supabase.from("tenants").delete().eq("id", tenant.id)
-    // إرجاع الوحدة لشاغرة
     if (tenant.unit_id) {
       await supabase.from("units").update({ status: "شاغرة" }).eq("id", tenant.unit_id)
     }
     setDeletingId(null)
     fetchTenants(); fetchUnits()
+  }
+
+  const paymentLabel = (type: string) => {
+    if (type === "شهري") return { label: "شهري", color: "#3B82F6" }
+    if (type === "دفعتين") return { label: "دفعتين", color: "#8B5CF6" }
+    if (type === "4 دفعات") return { label: "4 دفعات", color: "#F59E0B" }
+    return { label: "سنوي", color: "#10B981" }
   }
 
   return (
@@ -100,10 +108,30 @@ export default function TenantsPage() {
                   <option key={unit.id} value={unit.id}>وحدة {unit.unit_number}</option>
                 ))}
               </select>
-              <input type="number" placeholder="قيمة الإيجار" value={rentAmount}
+              <input type="number" placeholder="قيمة الإيجار السنوي" value={rentAmount}
                 onChange={(e) => setRentAmount(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg text-sm text-white outline-none"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", fontFamily: "'Tajawal', sans-serif" }} />
+
+              {/* طريقة الدفع */}
+              <div>
+                <p className="text-xs mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>طريقة الدفع</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {["شهري", "دفعتين", "4 دفعات", "سنوي"].map((type) => (
+                    <button key={type} onClick={() => setPaymentType(type)}
+                      className="py-2 rounded-lg text-xs font-medium transition-all"
+                      style={{
+                        background: paymentType === type ? "linear-gradient(135deg, #C9A96E, #8B6914)" : "rgba(255,255,255,0.06)",
+                        color: paymentType === type ? "white" : "rgba(255,255,255,0.4)",
+                        border: paymentType === type ? "none" : "1px solid rgba(255,255,255,0.08)",
+                        fontFamily: "'Tajawal', sans-serif"
+                      }}>
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <input type="date" value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg text-sm text-white outline-none"
@@ -136,64 +164,68 @@ export default function TenantsPage() {
           </div>
         ) : (
           <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
-            {/* Table Header */}
-            <div className="grid grid-cols-5 px-6 py-3 text-xs font-medium"
+            <div className="grid grid-cols-6 px-6 py-3 text-xs font-medium"
               style={{ background: "#141414", color: "rgba(255,255,255,0.3)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <span>الاسم</span>
               <span>الجوال</span>
               <span>الوحدة</span>
               <span>الإيجار</span>
+              <span>طريقة الدفع</span>
               <span></span>
             </div>
-            {tenants.map((tenant, i) => (
-              <div key={tenant.id}
-                className="grid grid-cols-5 px-6 py-4 items-center"
-                style={{
-                  background: i % 2 === 0 ? "#111111" : "#0E0E0E",
-                  borderBottom: i < tenants.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none"
-                }}>
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #C9A96E, #8B6914)" }}>
-                    {tenant.full_name?.charAt(0)}
+            {tenants.map((tenant, i) => {
+              const payment = paymentLabel(tenant.payment_type)
+              return (
+                <div key={tenant.id}
+                  className="grid grid-cols-6 px-6 py-4 items-center"
+                  style={{
+                    background: i % 2 === 0 ? "#111111" : "#0E0E0E",
+                    borderBottom: i < tenants.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none"
+                  }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                      style={{ background: "linear-gradient(135deg, #C9A96E, #8B6914)" }}>
+                      {tenant.full_name?.charAt(0)}
+                    </div>
+                    <span className="text-sm font-medium text-white">{tenant.full_name}</span>
                   </div>
-                  <span className="text-sm font-medium text-white">{tenant.full_name}</span>
+                  <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{tenant.phone}</span>
+                  <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
+                    {tenant.units?.unit_number || "—"}
+                  </span>
+                  <span className="text-sm font-semibold" style={{ color: "#C9A96E" }}>
+                    {tenant.rent_amount?.toLocaleString()} ر
+                  </span>
+                  <span className="text-xs font-medium px-2 py-1 rounded-lg w-fit"
+                    style={{ background: `${payment.color}20`, color: payment.color, border: `1px solid ${payment.color}40` }}>
+                    {payment.label}
+                  </span>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => deleteTenant(tenant)}
+                      disabled={deletingId === tenant.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                      style={{
+                        background: "rgba(239,68,68,0.1)",
+                        color: deletingId === tenant.id ? "rgba(239,68,68,0.4)" : "#EF4444",
+                        border: "1px solid rgba(239,68,68,0.2)"
+                      }}>
+                      {deletingId === tenant.id ? "جارٍ الحذف..." : (
+                        <>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6l-1 14H6L5 6" />
+                            <path d="M10 11v6M14 11v6" />
+                            <path d="M9 6V4h6v2" />
+                          </svg>
+                          حذف
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{tenant.phone}</span>
-                <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-                  {tenant.units?.unit_number || "—"}
-                </span>
-                <span className="text-sm font-semibold" style={{ color: "#C9A96E" }}>
-                  {tenant.rent_amount?.toLocaleString()} ر
-                </span>
-                {/* زر الحذف */}
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => deleteTenant(tenant)}
-                    disabled={deletingId === tenant.id}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                    style={{
-                      background: "rgba(239,68,68,0.1)",
-                      color: deletingId === tenant.id ? "rgba(239,68,68,0.4)" : "#EF4444",
-                      border: "1px solid rgba(239,68,68,0.2)"
-                    }}>
-                    {deletingId === tenant.id ? (
-                      "جارٍ الحذف..."
-                    ) : (
-                      <>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                          <polyline points="3 6 5 6 21 6" />
-                          <path d="M19 6l-1 14H6L5 6" />
-                          <path d="M10 11v6M14 11v6" />
-                          <path d="M9 6V4h6v2" />
-                        </svg>
-                        حذف
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
