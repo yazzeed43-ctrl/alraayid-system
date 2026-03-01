@@ -10,6 +10,7 @@ export default function UnitsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState("all")
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchUnits()
@@ -26,13 +27,27 @@ export default function UnitsPage() {
 
   const filtered = units.filter(u => {
     const matchSearch = u.unit_number?.includes(search) || u.buildings?.name?.includes(search)
-    const matchFilter = filter === "all" || u.status === filter
+    const matchFilter =
+      filter === "all" ||
+      (filter === "مؤجرة" && u.status === "مؤجرة") ||
+      (filter === "شاغرة" && u.status !== "مؤجرة")
     return matchSearch && matchFilter
   })
 
   const statusLabel = (status: string) => {
-    if (status === "occupied") return { label: "مؤجرة", color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" }
+    if (status === "مؤجرة") return { label: "مؤجرة", color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" }
     return { label: "شاغرة", color: "bg-amber-500/20 text-amber-400 border border-amber-500/30" }
+  }
+
+  const deleteUnit = async (e: React.MouseEvent, unit: any) => {
+    e.stopPropagation()
+    if (unit.status === "مؤجرة") return alert("لا يمكن حذف وحدة مؤجرة، احذف المستأجر أولاً")
+    const confirmed = window.confirm(`هل تريد حذف الوحدة ${unit.unit_number}؟`)
+    if (!confirmed) return
+    setDeletingId(unit.id)
+    await supabase.from("units").delete().eq("id", unit.id)
+    setDeletingId(null)
+    fetchUnits()
   }
 
   return (
@@ -50,8 +65,8 @@ export default function UnitsPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         {[
           { label: 'إجمالي الوحدات', value: units.length, icon: '🏢', color: '#C9A96E' },
-          { label: 'مؤجرة', value: units.filter(u => u.status === "occupied").length, icon: '✅', color: '#34d399' },
-          { label: 'شاغرة', value: units.filter(u => u.status !== "occupied").length, icon: '🔓', color: '#f59e0b' },
+          { label: 'مؤجرة', value: units.filter(u => u.status === "مؤجرة").length, icon: '✅', color: '#34d399' },
+          { label: 'شاغرة', value: units.filter(u => u.status !== "مؤجرة").length, icon: '🔓', color: '#f59e0b' },
         ].map((s, i) => (
           <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: '#111', border: '1px solid #1e1e1e' }}>
             <div className="text-2xl mb-2">{s.icon}</div>
@@ -71,7 +86,7 @@ export default function UnitsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        {["all", "occupied", "vacant"].map(f => (
+        {["all", "مؤجرة", "شاغرة"].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className="px-4 py-2 rounded-lg text-sm"
             style={{
@@ -79,7 +94,7 @@ export default function UnitsPage() {
               color: filter === f ? '#0a0a0a' : '#888',
               border: '1px solid #1e1e1e'
             }}>
-            {f === "all" ? "الكل" : f === "occupied" ? "مؤجرة" : "شاغرة"}
+            {f === "all" ? "الكل" : f}
           </button>
         ))}
       </div>
@@ -96,7 +111,7 @@ export default function UnitsPage() {
           <table className="w-full">
             <thead>
               <tr style={{ backgroundColor: '#111', borderBottom: '1px solid #1e1e1e' }}>
-                {['رقم الوحدة', 'العمارة', 'الدور', 'الإيجار', 'المستأجر', 'الحالة'].map(h => (
+                {['رقم الوحدة', 'العمارة', 'الدور', 'الإيجار', 'المستأجر', 'الحالة', ''].map(h => (
                   <th key={h} className="text-right p-4 text-sm font-medium" style={{ color: '#888' }}>{h}</th>
                 ))}
               </tr>
@@ -116,6 +131,29 @@ export default function UnitsPage() {
                     <td className="p-4 text-sm font-bold" style={{ color: '#C9A96E' }}>{unit.rent_price?.toLocaleString()} ر.س</td>
                     <td className="p-4 text-sm" style={{ color: tenant ? '#34d399' : '#555' }}>{tenant?.full_name || '—'}</td>
                     <td className="p-4"><span className={`text-xs px-3 py-1 rounded-full ${color}`}>{label}</span></td>
+                    <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => deleteUnit(e, unit)}
+                        disabled={deletingId === unit.id}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium"
+                        style={{
+                          background: "rgba(239,68,68,0.1)",
+                          color: deletingId === unit.id ? "rgba(239,68,68,0.4)" : "#EF4444",
+                          border: "1px solid rgba(239,68,68,0.2)"
+                        }}>
+                        {deletingId === unit.id ? "..." : (
+                          <>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14H6L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                              <path d="M9 6V4h6v2" />
+                            </svg>
+                            حذف
+                          </>
+                        )}
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
