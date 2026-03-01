@@ -13,6 +13,7 @@ export default function TenantsPage() {
   const [startDate, setStartDate] = useState("")
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const fetchTenants = async () => {
     const { data } = await supabase
@@ -39,6 +40,19 @@ export default function TenantsPage() {
     await supabase.from("units").update({ status: "مؤجرة" }).eq("id", unitId)
     setFullName(""); setPhone(""); setUnitId(""); setRentAmount(""); setStartDate("")
     setShowForm(false); setLoading(false)
+    fetchTenants(); fetchUnits()
+  }
+
+  const deleteTenant = async (tenant: any) => {
+    const confirmed = window.confirm(`هل تريد حذف المستأجر "${tenant.full_name}"؟`)
+    if (!confirmed) return
+    setDeletingId(tenant.id)
+    await supabase.from("tenants").delete().eq("id", tenant.id)
+    // إرجاع الوحدة لشاغرة
+    if (tenant.unit_id) {
+      await supabase.from("units").update({ status: "شاغرة" }).eq("id", tenant.unit_id)
+    }
+    setDeletingId(null)
     fetchTenants(); fetchUnits()
   }
 
@@ -123,16 +137,17 @@ export default function TenantsPage() {
         ) : (
           <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.06)" }}>
             {/* Table Header */}
-            <div className="grid grid-cols-4 px-6 py-3 text-xs font-medium"
+            <div className="grid grid-cols-5 px-6 py-3 text-xs font-medium"
               style={{ background: "#141414", color: "rgba(255,255,255,0.3)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               <span>الاسم</span>
               <span>الجوال</span>
               <span>الوحدة</span>
               <span>الإيجار</span>
+              <span></span>
             </div>
             {tenants.map((tenant, i) => (
               <div key={tenant.id}
-                className="grid grid-cols-4 px-6 py-4 items-center"
+                className="grid grid-cols-5 px-6 py-4 items-center"
                 style={{
                   background: i % 2 === 0 ? "#111111" : "#0E0E0E",
                   borderBottom: i < tenants.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none"
@@ -151,6 +166,32 @@ export default function TenantsPage() {
                 <span className="text-sm font-semibold" style={{ color: "#C9A96E" }}>
                   {tenant.rent_amount?.toLocaleString()} ر
                 </span>
+                {/* زر الحذف */}
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => deleteTenant(tenant)}
+                    disabled={deletingId === tenant.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                    style={{
+                      background: "rgba(239,68,68,0.1)",
+                      color: deletingId === tenant.id ? "rgba(239,68,68,0.4)" : "#EF4444",
+                      border: "1px solid rgba(239,68,68,0.2)"
+                    }}>
+                    {deletingId === tenant.id ? (
+                      "جارٍ الحذف..."
+                    ) : (
+                      <>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4h6v2" />
+                        </svg>
+                        حذف
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
