@@ -28,8 +28,8 @@ export default function ReportsPage() {
   const buildingIncomeReport = buildings.map(b => {
     const bp = payments.filter(p => p.contracts?.units?.buildings?.id === b.id)
     const totalPaid = bp.reduce((sum, p) => sum + (p.amount || 0), 0)
-    const occupied = b.units?.filter((u: any) => u.status === "occupied") || []
-    const vacant = b.units?.filter((u: any) => u.status !== "occupied") || []
+    const occupied = b.units?.filter((u: any) => u.status === "مؤجرة") || []
+    const vacant = b.units?.filter((u: any) => u.status !== "مؤجرة") || []
     const monthlyExpected = occupied.reduce((sum: number, u: any) => sum + (u.rent_price || 0), 0)
     return { name: b.name, totalUnits: b.units?.length || 0, occupied: occupied.length, vacant: vacant.length, monthlyExpected, totalPaid }
   })
@@ -126,8 +126,8 @@ export default function ReportsPage() {
                 <div className="grid grid-cols-3 gap-4 mb-6">
                   {[
                     { icon: '💰', val: payments.reduce((s,p) => s+(p.amount||0),0).toLocaleString()+' ر.س', label: 'إجمالي المدفوع', color: '#C9A96E' },
-                    { icon: '🏢', val: buildings.reduce((s,b) => s+(b.units?.filter((u:any)=>u.status==="occupied").length||0),0), label: 'وحدات مؤجرة', color: '#34d399' },
-                    { icon: '🔓', val: buildings.reduce((s,b) => s+(b.units?.filter((u:any)=>u.status!=="occupied").length||0),0), label: 'وحدات شاغرة', color: '#f59e0b' },
+                    { icon: '🏢', val: buildings.reduce((s,b) => s+(b.units?.filter((u:any)=>u.status==="مؤجرة").length||0),0), label: 'وحدات مؤجرة', color: '#34d399' },
+                    { icon: '🔓', val: buildings.reduce((s,b) => s+(b.units?.filter((u:any)=>u.status!=="مؤجرة").length||0),0), label: 'وحدات شاغرة', color: '#f59e0b' },
                   ].map((s,i) => (
                     <div key={i} className="p-4 rounded-xl" style={{ backgroundColor: '#111', border: '1px solid #1e1e1e' }}>
                       <div className="text-2xl mb-2">{s.icon}</div>
